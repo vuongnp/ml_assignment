@@ -1,1 +1,2 @@
 ultralytics==8.0.199
+shapely==2.0.3

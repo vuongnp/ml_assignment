@@ -111,40 +111,11 @@ def get_angle(p1, p2):
 def L2(p1, p2):
     return np.linalg.norm(p1 - p2)
 
-def is_area_valid(points, thres):
-    """
-    The function `is_area_valid` checks if the area of a contour defined by a set of points is greater
-    than a specified threshold.
-    
-    :param points: The `points` parameter in the `is_area_valid` function is expected to be a list of
-    points that define a contour.
-    :param thres: The `thres` parameter in the `is_area_valid` function is a threshold value that is
-    used to determine if the area calculated from the given points is valid or not. If the calculated
-    area is less than this threshold value, the function will consider it too small and return `False`
-    :return: a boolean value - True or False.
-    """
-    area = cv2.contourArea(points)
-    if area < thres:
-        print(f"Mask size {area} is too small --> Skipped")
-        return False
-    return True
-
-def is_hull_valid(hull, thres = 5):
-    """
-    The function `is_hull_valid` checks if the number of points in a hull is sufficient for calculating
-    the representation, with a default threshold of 6 points.
-    
-    :param hull: The convex hull
-    :param thres: The `thres` parameter in the `is_hull_valid` function is used to specify the minimum
-    number of points required in the `hull` list for the representation calculation to be considered
-    valid. By default, the threshold is set to 5 points.
-    :return: The function `is_hull_valid` returns a boolean value - `True` if the length of the `hull`
-    is greater than or equal to the threshold `thres`, and `False` otherwise.
-    """
-    if len(hull) < thres:
-        print(f"{len(hull)} points are not enough to calculate the representation --> Skipped")
-        return False
-    return True
+def is_overlap(processed_polygons, polygon):
+    for p in processed_polygons:
+        if p.intersects(polygon):
+            return True
+    return False   
 
 def get_center(points):
     center = np.mean(points, axis=0)

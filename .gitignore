@@ -2,4 +2,4 @@ runs/
 /*.pt
 __pycache__/
 *.cache
-tmp0/
+tmp/

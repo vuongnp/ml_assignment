@@ -3,6 +3,7 @@ import argparse
 from ultralytics import YOLO
 import cv2
 import numpy as np
+from shapely.geometry import Polygon
 
 from utils import *
 
@@ -23,21 +24,29 @@ def get_inference(model_path, data_dir, conf_thres, iou_thres, device):
     results = model.predict(data_dir, conf=conf_thres, iou=iou_thres, device=device)
     return results
 
-# def preprocessing(masks, classes, ori_w, ori_h):
-#     n = len(masks)
-#     top_masks = []
-#     for i in range(n):
-#         if int(classes[i]) == 0:
-#             # find contours of mask
-#             contours = find_contours(masks[i], (ori_w, ori_h))
-#             # tmp = np.zeros((h, w, 3), np.uint8)
-#             # tmp = visualize_contours(tmp, contours[0])
-#             # cv2.imwrite(f"tmp/{name}_{i}_contour.png", tmp)
-#             # find convex hull of the contour
-#             hull = find_best_convex_hull(contours)
-#             # # tmp = visualize_contours(tmp, hull)
-#             # cv2.imwrite(f"tmp/{name}_{i}_hull.png", tmp)
-#             top_masks.append()
+def preprocessing(masks, classes, ori_size, area_thres):
+    n = len(masks)
+    tops = []
+    for i in range(n):
+        if int(classes[i]) != 0:
+            continue
+        # find contours of mask
+        contours = find_contours(masks[i], (ori_size[0], ori_size[1]))
+        # find convex hull of the contour
+        hull = find_best_convex_hull(contours)
+        # ignore invalid hull
+        if len(hull) < 5:
+            print(f"{len(hull)} points are not enough to calculate the representation --> Skipped")
+            continue
+        area = cv2.contourArea(hull)
+        if area < area_thres:
+            print(f"Hull size {area} is too small --> Skipped")
+            continue
+        tops.append((area, hull))
+    sorted_tops = sorted(tops, key = lambda x : x[0])
+    hulls = [i for _, i in sorted_tops]
+
+    return hulls
                
 def visualize_result(image, hull, five_points, three_points, start_point, end_point):
     visualize_contours(image, hull)
@@ -58,56 +67,33 @@ def evaluate(preds, area_thres, result_dir):
     for result in preds:
         name  = result.path.split("/")[-1].split(".")[0]
         print(f"\nProcessing {name}...")
-        count = 0
         h, w, _ = result.orig_img.shape
         # create an empty black image
         image = np.zeros((h, w, 3), np.uint8)
         if not result.masks:
-            print(name)
             continue
 
         f = open(f"{out_txts_dir}/{name}.txt", "w")
-        for i in range(len(result.masks)):
-            if int(result.boxes.cls[i]) == 1:
+        hulls = preprocessing(result.masks, result.boxes.cls, (w, h), area_thres)
+        processed_polygons = []
+        for hull in hulls:
+            polygon = Polygon(hull)
+            if is_overlap(processed_polygons, polygon):
                 continue
-            
-            # find contours of mask
-            contours = find_contours(result.masks[i], (w,h))
-            # tmp = np.zeros((h, w, 3), np.uint8)
-            # tmp = visualize_contours(tmp, contours[0])
-            # cv2.imwrite(f"tmp/{name}_{i}_contour.png", tmp)
-            # find convex hull of the contour
-            hull = find_best_convex_hull(contours)
-            # # tmp = visualize_contours(tmp, hull)
-            # cv2.imwrite(f"tmp/{name}_{i}_hull.png", tmp)
 
             # find 5 points that represent the convex hull
-            if not is_hull_valid(hull):
-                continue
             five_idxs, five_points = get_5_representation_points(hull)
-            # # tmp = visualize_points(tmp, five_points, (0, 255, 0))
-            # cv2.imwrite(f"tmp/{name}_{i}_5p.png", tmp)
-
-            # ignore too small convex hull
-            if not is_area_valid(five_points, area_thres):
-                continue
 
             # get picked point and angle
             three_idxs, three_points = get_3_bottom_points(hull, five_idxs)
-            # # tmp = visualize_points(tmp, three_points, (0, 0, 255), 4)
-            # cv2.imwrite(f"tmp/{name}_{i}_3p.png", tmp)
             two_idxs = list(set(five_idxs) - set(three_idxs))
             two_points = hull[two_idxs]
-
             center = get_center(five_points)
             start_point = get_picked_point(three_idxs, two_idxs, center, hull)
-            # start_point = get_center(five_points)
             end_point = get_center(two_points)
             angle = get_angle(start_point, end_point)
 
-            # # tmp = visualize_arrow(tmp, start_point, end_point)
-            # cv2.imwrite(f"tmp/{name}_{i}_res.png", tmp)
-            count += 1
+            processed_polygons.append(polygon)
 
             # save the result
             line = f"{str(start_point[0])} {str(start_point[1])} {str(angle)}\n"
@@ -116,7 +102,7 @@ def evaluate(preds, area_thres, result_dir):
             visualize_result(image, hull, five_points, three_points, start_point, end_point)
             cv2.imwrite(f"{out_images_dir}/{name}.png", image)
         f.close()
-        print(f"Found {count} switches")
+        print(f"Found {len(processed_polygons)} switches")
 
 if __name__ == '__main__':
     args = parser()
