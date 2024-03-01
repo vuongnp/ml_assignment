@@ -79,6 +79,7 @@ def evaluate(preds, area_thres, result_dir):
         for hull in hulls:
             polygon = Polygon(hull)
             if is_overlap(processed_polygons, polygon):
+                print(f"Overlapped! --> Skipped")
                 continue
 
             # find 5 points that represent the convex hull
