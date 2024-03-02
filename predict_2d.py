@@ -30,10 +30,13 @@ def preprocessing(masks, classes, ori_size, area_thres):
     for i in range(n):
         if int(classes[i]) != 0:
             continue
+
         # find contours of mask
         contours = find_contours(masks[i], (ori_size[0], ori_size[1]))
+
         # find convex hull of the contour
         hull = find_best_convex_hull(contours)
+
         # ignore invalid hull
         if len(hull) < 5:
             print(f"{len(hull)} points are not enough to calculate the representation --> Skipped")
@@ -42,6 +45,7 @@ def preprocessing(masks, classes, ori_size, area_thres):
         if area < area_thres:
             print(f"Hull size {area} is too small --> Skipped")
             continue
+        
         tops.append((area, hull))
     sorted_tops = sorted(tops, key = lambda x : x[0])
     hulls = [i for _, i in sorted_tops]
@@ -85,12 +89,14 @@ def evaluate(preds, area_thres, result_dir):
             # find 5 points that represent the convex hull
             five_idxs, five_points = get_5_representation_points(hull)
 
-            # get picked point and angle
+            # get picked point
             three_idxs, three_points = get_3_bottom_points(hull, five_idxs)
             two_idxs = list(set(five_idxs) - set(three_idxs))
             two_points = hull[two_idxs]
             center = get_center(five_points)
             start_point = get_picked_point(three_idxs, two_idxs, center, hull)
+
+            # get angle
             end_point = get_center(two_points)
             angle = get_angle(start_point, end_point)
 
@@ -101,7 +107,7 @@ def evaluate(preds, area_thres, result_dir):
             f.write(line)
 
             visualize_result(image, hull, five_points, three_points, start_point, end_point)
-            cv2.imwrite(f"{out_images_dir}/{name}.png", image)
+        cv2.imwrite(f"{out_images_dir}/{name}.png", image)
         f.close()
         print(f"Found {len(processed_polygons)} switches")
 

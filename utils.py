@@ -123,8 +123,16 @@ def get_center(points):
     return center
 
 def get_picked_point(three_idxs, two_idxs, center, hull):
-    # print(three_idxs, two_idxs)
-    # center = np.mean(hull, axis=0)
+    """
+    The function `get_picked_point` calculates the center point of the switch
+    
+    :param three_idxs: The `three_idxs` parameter refers to three bottom points
+    :param two_idxs: The `two_idxs` parameter refers to two top points
+    :param center: The center point of 5 representation points
+    :return: The function `get_picked_point` returns the point that is the mean of four points in the
+    `hull` array. The four points are selected based on the input parameters `three_idxs`, `two_idxs`,
+    `center`, and `hull`.
+    """
     dists = [(L2(hull[i], center), i) for i in three_idxs]
     idx = sorted(dists, key = lambda x : x[0])[0][1]
     four_idxs = two_idxs
