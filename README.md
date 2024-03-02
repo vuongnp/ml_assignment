@@ -34,5 +34,6 @@ python predict_2d.py -s [path/to/testdata] -m [path/to/segmentation model] -o [p
 ```
 See all parameters in predict_2d.py
 ## Result
-
+[Result on test data](https://github.com/vuongnp/ml_assignment/tree/main/results/section1)
 ## Documentation
+[Document](https://drive.google.com/file/d/1qxFZOnaYuQ2e8v8xACQZnozvrM-EU8mq/view?usp=drive_link)
